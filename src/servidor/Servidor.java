@@ -49,10 +49,9 @@ public class Servidor {
                 break;
             case "LOGIN":
                 resultado = UsuarioDAO.validarUsuario(usuario.getUSUARIO(), usuario.getPASSWORD());
-                System.out.println("Entrando a la acción de login "+ resultado);
                 break;
             default:
-                resultado = "ACCION_DESCONOCIDA";
+                resultado = "ACCION_DESCONOCIDA_CLIENTE";
         }
 
         // Enviar respuesta
