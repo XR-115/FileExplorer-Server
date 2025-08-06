@@ -3,8 +3,13 @@ package servidor;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import servidor.modelos.FilesDAO;
 import servidor.modelos.Usuario;
 import servidor.modelos.UsuarioDAO;
 
@@ -33,35 +38,83 @@ public class Servidor {
     }
 
     private static void manejarCliente(Socket socket) {
-    try (
-        // Usar SOLO streams de objetos
-        ObjectOutputStream salida = new ObjectOutputStream(socket.getOutputStream());
-        ObjectInputStream entrada = new ObjectInputStream(socket.getInputStream()))
-    {
-        // Leer datos en MISMO ORDEN que cliente envía
-        String accion = entrada.readUTF();        // Leer acción
-        Usuario usuario = (Usuario) entrada.readObject();  // Leer objeto
+        try (
+                ObjectOutputStream salida = new ObjectOutputStream(socket.getOutputStream()); ObjectInputStream entrada = new ObjectInputStream(socket.getInputStream())) {
+            String accion = entrada.readUTF(); // Leer acción del cliente
 
-        String resultado;
-        switch (accion) {
-            case "REGISTER":
-                resultado = UsuarioDAO.crearUsuario(usuario);
-                break;
-            case "LOGIN":
-                resultado = UsuarioDAO.validarUsuario(usuario.getUSUARIO(), usuario.getPASSWORD());
-                break;
-            default:
-                resultado = "ACCION_DESCONOCIDA_CLIENTE";
+            Object recibido = entrada.readObject(); // Leer objeto (puede ser cualquier cosa)
+
+            switch (accion) {
+                case "REGISTER": {
+                    if (recibido instanceof Usuario usuario) {
+                        String resultado = UsuarioDAO.crearUsuario(usuario);
+                        salida.writeObject(resultado); // Enviar un String de respuesta
+                    } else {
+                        salida.writeObject("ERROR_TIPO_DATOS");
+                    }
+                    break;
+                }
+
+                case "LOGIN": {
+                    System.out.println("Validando usuario" + recibido);
+                    if (recibido instanceof Usuario usuario) {
+                        Usuario u = UsuarioDAO.validarUsuario(usuario.getUSUARIO(), usuario.getPASSWORD());
+                        salida.writeObject(u); // Enviamos el usuario si es válido, o nul}o
+                    } else {
+                        salida.writeObject(null);
+                    }
+                    break;
+                }
+
+                case "GET_FILES": {
+                    List<String> u = FilesDAO.obtenerArchivosEnCarpeta("src/files");
+                    System.out.println("[GET_FILES] Los archivos montados en el servidor son: " + u);
+                    salida.writeObject(u); // Enviamos el usuario si es válido, o nul}o
+
+                    break;
+                }
+
+                case "GET_FILES_DATA": {
+                    if (recibido instanceof String nombreArchivo) {
+                        File archivo = new File("src/files/" + nombreArchivo);
+                        byte[] contenido = Files.readAllBytes(archivo.toPath());
+                        salida.writeObject(contenido);
+                    } else {
+                        salida.writeObject(null);
+                    }
+                    break;
+                }
+
+                case "UPLOAD_FILE":
+                    if (recibido instanceof Map<?, ?> datos) {
+
+                        System.out.println("[UPLOAD_FILE] Los archivos montados en el servidor son: " + datos);
+                        String nombreDestino = (String) datos.get("nombreArchivo");
+                        byte[] archivoRecibido = (byte[]) datos.get("archivoModificado");
+                        // Guardar archivo
+                        Files.write(Paths.get("src/files/" + nombreDestino), archivoRecibido);
+                        salida.writeBoolean(true);
+                        salida.flush();
+                    }
+
+                    break;
+
+                default:
+                    salida.writeObject("ACCION_DESCONOCIDA");
+                    break;
+            }
+
+            salida.flush();
+
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                socket.close();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
         }
-
-        // Enviar respuesta
-        salida.writeUTF(resultado);
-        salida.flush();
-
-    } catch (IOException | ClassNotFoundException e) {
-        e.printStackTrace();
-    } finally {
-        try { socket.close(); } catch (IOException ex) { /* manejo error */ }
     }
-}
+
 }
