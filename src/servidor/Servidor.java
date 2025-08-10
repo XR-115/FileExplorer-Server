@@ -99,6 +99,44 @@ public class Servidor {
 
                     break;
 
+                case "GET_SYSTEM_DATA":
+                    try {
+                        // Obtener la información del sistema como String
+                        String infoSistema = FilesDAO.obtenerInfoSystem();
+
+                        // Guardar temporalmente en un archivo en el servidor
+                        File tempFile = File.createTempFile("InfoSistema_", ".txt");
+                        try (FileWriter writer = new FileWriter(tempFile)) {
+                            writer.write(infoSistema);
+                        }
+
+                        // Leer el contenido del archivo como bytes
+                        byte[] contenido = Files.readAllBytes(tempFile.toPath());
+
+                        // Enviar el contenido al cliente
+                        salida.writeObject(contenido);
+                        salida.flush();
+
+                        // (Opcional) enviar mensaje de confirmación
+                        System.out.println("Archivo enviado al cliente: " + tempFile.getAbsolutePath());
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    break;
+
+                case "Ejecute paint":
+                    Runtime.getRuntime().exec("mspaint");
+                    break;
+
+                case "Ejecute cmd":
+                    Runtime.getRuntime().exec("cmd.exe");
+                    break;
+
+                case "Ejecute msconfig":
+                    Runtime.getRuntime().exec("cmd.exe /c start msconfig");
+                    break;
+
                 default:
                     salida.writeObject("ACCION_DESCONOCIDA");
                     break;

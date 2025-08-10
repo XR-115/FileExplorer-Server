@@ -11,6 +11,7 @@ public class UsuarioDAO {
 
     // ------------------------ CREAR USUARIO EN LA BASE DE DATOS ------------------------  //
     public static String crearUsuario(Usuario usuario) {
+        
         if (existeUsuario(usuario.getUSUARIO())) {
             return "EXISTE";
         }
@@ -18,7 +19,8 @@ public class UsuarioDAO {
         String sql = "INSERT INTO usuarios (USUARIO, PASSWORD, TIPOUSUARIO) values (?, ?, ?)";
 
         try (
-                Connection conexion = ConexionDB.obtenerConexion(); PreparedStatement prepararSentencia = conexion.prepareStatement(sql)) {
+            Connection conexion = ConexionDB.obtenerConexion(); 
+            PreparedStatement prepararSentencia = conexion.prepareStatement(sql)) {
             prepararSentencia.setString(1, usuario.getUSUARIO());
             prepararSentencia.setString(2, hashearMD5(usuario.getPASSWORD())); // HASHEAR LA CONTRASEÑA DEL USUARIO
             prepararSentencia.setString(3, usuario.getTIPOUSUARIO());
